@@ -1,5 +1,6 @@
 package com.musicscanner.app.ui
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -7,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.musicscanner.app.ui.screens.CameraScreen
+import com.musicscanner.app.ui.screens.HistoryScreen
 import com.musicscanner.app.ui.screens.HomeScreen
 import com.musicscanner.app.ui.screens.PlaybackScreen
 import com.musicscanner.app.ui.screens.ProcessingScreen
@@ -18,6 +20,7 @@ sealed class Screen(val route: String) {
         fun createRoute(imagePath: String) = "processing/$imagePath"
     }
     object Playback : Screen("playback")
+    object History : Screen("history")
 }
 
 @Composable
@@ -32,6 +35,15 @@ fun MusicScannerNavigation() {
             HomeScreen(
                 onScanClick = {
                     navController.navigate(Screen.Camera.route)
+                },
+                onGalleryImageSelected = { uri ->
+                    val encodedPath = Uri.encode(uri.toString())
+                    navController.navigate(
+                        Screen.Processing.createRoute(encodedPath)
+                    )
+                },
+                onHistoryClick = {
+                    navController.navigate(Screen.History.route)
                 }
             )
         }
@@ -77,6 +89,19 @@ fun MusicScannerNavigation() {
                 },
                 onNewScanClick = {
                     navController.navigate(Screen.Camera.route) {
+                        popUpTo(Screen.Home.route)
+                    }
+                }
+            )
+        }
+
+        composable(Screen.History.route) {
+            HistoryScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onScoreSelected = { scoreId ->
+                    navController.navigate(Screen.Playback.route) {
                         popUpTo(Screen.Home.route)
                     }
                 }
