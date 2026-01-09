@@ -9,6 +9,8 @@ import com.musicscanner.app.data.PlaybackState
 import com.musicscanner.app.data.ProcessingState
 import com.musicscanner.app.data.ScoreRepository
 import com.musicscanner.app.recognition.MusicRecognizer
+import com.musicscanner.app.recognition.PreviewSettings
+import com.musicscanner.app.recognition.RealtimePreviewData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +39,13 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
     // Captured image path
     private val _capturedImagePath = MutableStateFlow<String?>(null)
     val capturedImagePath: StateFlow<String?> = _capturedImagePath.asStateFlow()
+
+    // Real-time preview state
+    private val _previewData = MutableStateFlow(RealtimePreviewData())
+    val previewData: StateFlow<RealtimePreviewData> = _previewData.asStateFlow()
+
+    private val _previewSettings = MutableStateFlow(PreviewSettings())
+    val previewSettings: StateFlow<PreviewSettings> = _previewSettings.asStateFlow()
 
     /**
      * Process a captured image
@@ -138,6 +147,43 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
     }
 
     /**
+     * Update real-time preview data from camera frame analysis
+     */
+    fun updatePreviewData(data: RealtimePreviewData) {
+        _previewData.value = data
+    }
+
+    /**
+     * Toggle real-time preview mode
+     */
+    fun togglePreviewMode() {
+        _previewSettings.value = _previewSettings.value.copy(
+            enabled = !_previewSettings.value.enabled
+        )
+    }
+
+    /**
+     * Enable or disable real-time preview
+     */
+    fun setPreviewEnabled(enabled: Boolean) {
+        _previewSettings.value = _previewSettings.value.copy(enabled = enabled)
+    }
+
+    /**
+     * Update preview settings
+     */
+    fun updatePreviewSettings(settings: PreviewSettings) {
+        _previewSettings.value = settings
+    }
+
+    /**
+     * Clear preview data
+     */
+    fun clearPreviewData() {
+        _previewData.value = RealtimePreviewData()
+    }
+
+    /**
      * Reset state for new scan
      */
     fun reset() {
@@ -145,6 +191,7 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
         _processingState.value = ProcessingState.Idle
         _currentScore.value = null
         _capturedImagePath.value = null
+        _previewData.value = RealtimePreviewData()
     }
 
     override fun onCleared() {
