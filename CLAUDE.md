@@ -45,17 +45,24 @@ app/src/main/java/com/musicscanner/app/
 ├── MusicScannerApp.kt          # Application singleton
 ├── ui/
 │   ├── Navigation.kt           # Compose Navigation routes
-│   ├── screens/                # UI screens (Home, Camera, Processing, Playback)
+│   ├── screens/                # UI screens (Home, Camera, Processing, Playback, History)
+│   │   ├── HomeScreen.kt       # Home with gallery import
+│   │   ├── CameraScreen.kt     # Camera capture
+│   │   ├── ProcessingScreen.kt # Image processing status
+│   │   ├── PlaybackScreen.kt   # Playback with controls (loop, transpose, metronome)
+│   │   └── HistoryScreen.kt    # Score library/history
 │   ├── viewmodel/              # MusicScannerViewModel (single ViewModel)
 │   └── theme/                  # Material 3 theming (Color, Type, Theme)
 ├── recognition/
-│   ├── MusicRecognizer.kt      # OMR orchestrator
-│   └── ImageProcessor.kt       # Image preprocessing pipeline
+│   ├── MusicRecognizer.kt      # OMR orchestrator (multi-clef support)
+│   └── ImageProcessor.kt       # Image preprocessing pipeline (enhanced detection)
 ├── audio/
 │   ├── AudioSynthesizer.kt     # Sine wave synthesis with ADSR
-│   └── MusicPlayer.kt          # Playback controller
+│   ├── MusicPlayer.kt          # Playback controller (loop, transpose, metronome)
+│   └── MidiExporter.kt         # MIDI file export functionality
 └── data/
-    └── MusicModels.kt          # Data classes and enums
+    ├── MusicModels.kt          # Data classes and enums
+    └── ScoreRepository.kt      # Score history persistence
 ```
 
 ## Architecture Patterns
@@ -67,11 +74,18 @@ app/src/main/java/com/musicscanner/app/
 
 ## Key Data Models (in MusicModels.kt)
 
-- `MusicNote`: Pitch, octave, duration, position, accidentals
+- `MusicNote`: Pitch, octave, duration, position, accidentals, isRest, isDotted, ties, MIDI conversion
 - `MusicScore`: Collection of staves with metadata
-- `Staff`: Clef type, measures, signatures
+- `Staff`: Clef type, measures, time/key signatures
 - `Measure`: Notes grouped with time/key signatures
-- Enums: `Pitch`, `NoteDuration`, `Accidental`, `Clef`
+- `TimeSignature`: Common time (4/4), waltz (3/4), cut time (2/2), and custom
+- `KeySignature`: Tracks sharps/flats with affected pitch mapping
+- `PlaybackState`: Includes transpose, loop, and metronome state
+- Enums:
+  - `Pitch`: A through G
+  - `NoteDuration`: WHOLE, HALF, QUARTER, EIGHTH, SIXTEENTH, THIRTY_SECOND
+  - `Accidental`: NONE, SHARP, FLAT, NATURAL, DOUBLE_SHARP, DOUBLE_FLAT
+  - `Clef`: TREBLE, BASS, ALTO, TENOR
 
 ## Code Conventions
 
@@ -85,22 +99,53 @@ app/src/main/java/com/musicscanner/app/
 1. Grayscale conversion (standard luminance formula)
 2. Binarization via Otsu's thresholding
 3. Staff line detection via horizontal projection
-4. Note head detection via blob detection with flood fill
-5. Position-to-pitch mapping (treble clef)
+4. Grand staff detection (linked treble + bass staves)
+5. Time signature detection (4/4, 3/4, 6/8, 2/4, 2/2)
+6. Key signature detection (sharps and flats)
+7. Note head detection via blob detection with flood fill
+8. Beam and flag detection for eighth/sixteenth notes
+9. Rest detection (whole, half, quarter, eighth, sixteenth)
+10. Chord detection (multiple notes on same stem)
+11. Position-to-pitch mapping (treble, bass, alto, tenor clefs)
 
-## Audio Synthesis
+## Audio Synthesis & Playback
 
 - Sine wave generation with harmonics (fundamental + 2nd/3rd)
 - ADSR envelope: Attack 10ms, Decay 50ms, Sustain 70%, Release 100ms
 - MIDI frequency formula: A4 = 440Hz
 - Output via Android AudioTrack (PCM)
 
+### Playback Features
+- **Transpose**: Shift all notes -12 to +12 semitones
+- **Loop**: Toggle infinite replay of score
+- **Metronome**: Optional click track overlay during playback
+- **Variable tempo**: Adjustable BPM control
+
+### Export
+- **MIDI export**: Standard MIDI file format (.mid) with share intent support
+
 ## Current Limitations
 
-- Treble clef only (staff position mapping hardcoded)
-- Quarter and half notes only
-- Single staff per image
+- No ML-based note detection (uses blob detection)
+- No MusicXML export (MIDI only)
+- No instrument sounds/SoundFont (sine wave synthesis only)
+- No PDF import
+- No score editing UI
+- No real-time preview overlay on camera
 - Falls back to demo score (Twinkle Twinkle) when recognition fails
+
+## Recently Implemented Features
+
+- Multi-clef support (treble, bass, alto, tenor)
+- Grand staff recognition
+- Time and key signature detection
+- Rest detection (all durations)
+- Eighth/sixteenth/thirty-second notes with beam/flag detection
+- Chord recognition
+- Gallery import from device photos
+- Score history/library with persistence
+- MIDI export with sharing
+- Transpose, loop, and metronome playback controls
 
 ## Dependencies
 
