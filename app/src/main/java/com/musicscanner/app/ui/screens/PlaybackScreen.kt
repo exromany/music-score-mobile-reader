@@ -1,5 +1,7 @@
 package com.musicscanner.app.ui.screens
 
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.musicscanner.app.audio.MidiExporter
 import com.musicscanner.app.data.MusicNote
 import com.musicscanner.app.data.Pitch
 import com.musicscanner.app.ui.viewmodel.MusicScannerViewModel
@@ -35,10 +39,12 @@ fun PlaybackScreen(
 ) {
     val playbackState by viewModel.playbackState.collectAsState()
     val currentScore by viewModel.currentScore.collectAsState()
+    val context = LocalContext.current
 
     val notes = currentScore?.getAllNotes() ?: emptyList()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    var showTransposeDialog by remember { mutableStateOf(false) }
 
     // Auto-scroll to current note
     LaunchedEffect(playbackState.currentNoteIndex) {
@@ -84,6 +90,19 @@ fun PlaybackScreen(
                 }
             },
             actions = {
+                // MIDI Export
+                IconButton(onClick = {
+                    currentScore?.let { score ->
+                        val intent = MidiExporter.createShareIntent(context, score)
+                        if (intent != null) {
+                            context.startActivity(Intent.createChooser(intent, "Export MIDI"))
+                        } else {
+                            Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) {
+                    Icon(Icons.Default.Share, contentDescription = "Export MIDI")
+                }
                 IconButton(onClick = {
                     viewModel.reset()
                     onNewScanClick()
@@ -182,6 +201,13 @@ fun PlaybackScreen(
                     label = "Tempo",
                     value = "${playbackState.tempo} BPM"
                 )
+                StatItem(
+                    label = "Transpose",
+                    value = when {
+                        playbackState.transposeSemitones > 0 -> "+${playbackState.transposeSemitones}"
+                        else -> "${playbackState.transposeSemitones}"
+                    }
+                )
             }
         }
 
@@ -223,6 +249,65 @@ fun PlaybackScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Secondary controls (Loop, Metronome, Transpose)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Loop toggle
+            FilterChip(
+                selected = playbackState.isLooping,
+                onClick = { viewModel.toggleLoop() },
+                label = { Text("Loop") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Repeat,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+
+            // Metronome toggle
+            FilterChip(
+                selected = playbackState.isMetronomeEnabled,
+                onClick = { viewModel.toggleMetronome() },
+                label = { Text("Metronome") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+
+            // Transpose button
+            FilterChip(
+                selected = playbackState.transposeSemitones != 0,
+                onClick = { showTransposeDialog = true },
+                label = {
+                    Text(
+                        if (playbackState.transposeSemitones != 0)
+                            "${if (playbackState.transposeSemitones > 0) "+" else ""}${playbackState.transposeSemitones}"
+                        else "Key"
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Playback controls
         Row(
@@ -275,7 +360,7 @@ fun PlaybackScreen(
                 )
             }
 
-            // Tempo button (placeholder for tempo adjustment)
+            // Tempo button
             IconButton(
                 onClick = {
                     // Cycle through tempos
@@ -303,6 +388,72 @@ fun PlaybackScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
     }
+
+    // Transpose dialog
+    if (showTransposeDialog) {
+        TransposeDialog(
+            currentTranspose = playbackState.transposeSemitones,
+            onDismiss = { showTransposeDialog = false },
+            onTransposeChange = { semitones ->
+                viewModel.setTranspose(semitones)
+                showTransposeDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun TransposeDialog(
+    currentTranspose: Int,
+    onDismiss: () -> Unit,
+    onTransposeChange: (Int) -> Unit
+) {
+    var sliderValue by remember { mutableStateOf(currentTranspose.toFloat()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Transpose") },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = when {
+                        sliderValue.toInt() > 0 -> "+${sliderValue.toInt()} semitones"
+                        sliderValue.toInt() < 0 -> "${sliderValue.toInt()} semitones"
+                        else -> "Original key"
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    valueRange = -12f..12f,
+                    steps = 23
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("-12", style = MaterialTheme.typography.labelSmall)
+                    Text("0", style = MaterialTheme.typography.labelSmall)
+                    Text("+12", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onTransposeChange(sliderValue.toInt()) }) {
+                Text("Apply")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
