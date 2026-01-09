@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Music Sheet Scanner</string>
+    <string name="camera_permission_rationale">Camera permission is required to scan sheet music</string>
+    <string name="capture_button">Capture</string>
+    <string name="play_button">Play</string>
+    <string name="stop_button">Stop</string>
+    <string name="pause_button">Pause</string>
+    <string name="processing">Processing sheet music...</string>
+    <string name="no_music_detected">No music notation detected</string>
+    <string name="scan_instruction">Point your camera at sheet music and tap capture</string>
+</resources>

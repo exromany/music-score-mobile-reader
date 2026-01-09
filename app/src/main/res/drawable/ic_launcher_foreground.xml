@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Music note icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24 L54,68
+                          C52,66 48,65 44,66
+                          C38,68 34,74 36,80
+                          C38,86 44,88 50,86
+                          C56,84 60,78 58,72
+                          L58,40 L74,36 L74,28 L54,24 Z"/>
+
+    <!-- Staff lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M26,48 L82,48"/>
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M26,54 L82,54"/>
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M26,60 L82,60"/>
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M26,66 L82,66"/>
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:pathData="M26,72 L82,72"/>
+</vector>
