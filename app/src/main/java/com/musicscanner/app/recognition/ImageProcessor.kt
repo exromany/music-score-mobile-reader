@@ -64,7 +64,7 @@ class ImageProcessor {
         val threshold = calculateOtsuThreshold(grayscale)
 
         for (i in grayscale.indices) {
-            binary[i] = grayscale[i] < threshold  // true = black (foreground)
+            binary[i] = grayscale[i] <= threshold  // true = black (foreground)
         }
 
         return binary
