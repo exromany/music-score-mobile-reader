@@ -10,7 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
@@ -28,7 +30,9 @@ import androidx.compose.ui.unit.sp
 fun HomeScreen(
     onScanClick: () -> Unit,
     onGalleryImageSelected: (Uri) -> Unit = {},
-    onHistoryClick: () -> Unit = {}
+    onHistoryClick: () -> Unit = {},
+    isDarkMode: Boolean = false,
+    onToggleDarkMode: () -> Unit = {}
 ) {
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -47,6 +51,19 @@ fun HomeScreen(
                 )
             )
     ) {
+        // Dark mode toggle button in top right corner
+        IconButton(
+            onClick = onToggleDarkMode,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                contentDescription = if (isDarkMode) "Switch to Light Mode" else "Switch to Dark Mode",
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()

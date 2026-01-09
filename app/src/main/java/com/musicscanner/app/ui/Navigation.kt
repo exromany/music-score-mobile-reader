@@ -37,6 +37,9 @@ fun MusicScannerNavigation(
     val previewData by viewModel.previewData.collectAsState()
     val previewSettings by viewModel.previewSettings.collectAsState()
 
+    // Collect dark mode state
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
+
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route
@@ -54,7 +57,9 @@ fun MusicScannerNavigation(
                 },
                 onHistoryClick = {
                     navController.navigate(Screen.History.route)
-                }
+                },
+                isDarkMode = isDarkMode,
+                onToggleDarkMode = { viewModel.toggleDarkMode() }
             )
         }
 

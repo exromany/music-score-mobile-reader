@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.musicscanner.app.audio.MusicPlayer
 import com.musicscanner.app.data.MusicScore
 import com.musicscanner.app.data.PlaybackState
+import com.musicscanner.app.data.PreferencesRepository
 import com.musicscanner.app.data.ProcessingState
 import com.musicscanner.app.data.ScoreRepository
 import com.musicscanner.app.recognition.MusicRecognizer
@@ -24,6 +25,7 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
     private val musicRecognizer = MusicRecognizer(application)
     private val musicPlayer = MusicPlayer()
     private val scoreRepository = ScoreRepository(application)
+    private val preferencesRepository = PreferencesRepository(application)
 
     // Processing state
     private val _processingState = MutableStateFlow<ProcessingState>(ProcessingState.Idle)
@@ -46,6 +48,9 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
 
     private val _previewSettings = MutableStateFlow(PreviewSettings())
     val previewSettings: StateFlow<PreviewSettings> = _previewSettings.asStateFlow()
+
+    // Theme preference
+    val isDarkMode: StateFlow<Boolean> = preferencesRepository.isDarkMode
 
     /**
      * Process a captured image
@@ -144,6 +149,13 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
      */
     fun toggleMetronome() {
         musicPlayer.toggleMetronome()
+    }
+
+    /**
+     * Toggle dark mode
+     */
+    fun toggleDarkMode() {
+        preferencesRepository.toggleDarkMode()
     }
 
     /**
