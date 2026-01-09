@@ -11,8 +11,7 @@ Future features and improvements for Music Sheet Scanner.
 | User Experience | 3 | 8 | 38% |
 | Camera & Image | 1 | 5 | 20% |
 | Technical | 1 | 6 | 17% |
-| Quick Wins | 6 | 6 | 100% |
-| **Overall** | **24** | **41** | **59%** |
+| **Overall** | **18** | **35** | **51%** |
 
 ## Recognition Improvements
 
@@ -73,19 +72,6 @@ Future features and improvements for Music Sheet Scanner.
 | **Error recovery** | Better handling of partial recognition failures | Low | Planned |
 | **Performance profiling** | Optimize image processing for low-end devices | Medium | Planned |
 | **Accessibility** | TalkBack support, content descriptions | Low | Planned |
-
-## Quick Wins (Completed)
-
-All quick wins have been implemented:
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Gallery import** | Image picker intent integration | Done |
-| **MIDI export** | Standard format export with sharing | Done |
-| **Transpose control** | Pitch offset in playback | Done |
-| **Loop playback** | Infinite replay toggle | Done |
-| **Score history** | SharedPreferences persistence | Done |
-| **Metronome** | Click synthesis during playback | Done |
 
 ## Recommended Priority Order
 
