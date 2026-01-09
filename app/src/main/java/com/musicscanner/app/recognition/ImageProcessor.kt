@@ -41,8 +41,27 @@ class ImageProcessor {
      * Apply adaptive thresholding for binarization (Otsu's method)
      */
     fun binarize(grayscale: IntArray, width: Int, height: Int): BooleanArray {
-        val threshold = calculateOtsuThreshold(grayscale)
         val binary = BooleanArray(grayscale.size)
+
+        if (grayscale.isEmpty()) {
+            return binary
+        }
+
+        // Check for uniform image (all pixels same value)
+        val firstValue = grayscale[0]
+        val isUniform = grayscale.all { it == firstValue }
+
+        if (isUniform) {
+            // For uniform images, use 128 as midpoint threshold
+            // Black (< 128) = foreground (true), White (>= 128) = background (false)
+            val isForeground = firstValue < 128
+            for (i in binary.indices) {
+                binary[i] = isForeground
+            }
+            return binary
+        }
+
+        val threshold = calculateOtsuThreshold(grayscale)
 
         for (i in grayscale.indices) {
             binary[i] = grayscale[i] < threshold  // true = black (foreground)
