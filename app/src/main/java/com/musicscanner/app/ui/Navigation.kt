@@ -2,6 +2,9 @@ package com.musicscanner.app.ui
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,6 +15,7 @@ import com.musicscanner.app.ui.screens.HistoryScreen
 import com.musicscanner.app.ui.screens.HomeScreen
 import com.musicscanner.app.ui.screens.PlaybackScreen
 import com.musicscanner.app.ui.screens.ProcessingScreen
+import com.musicscanner.app.ui.viewmodel.MusicScannerViewModel
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -24,8 +28,14 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun MusicScannerNavigation() {
+fun MusicScannerNavigation(
+    viewModel: MusicScannerViewModel = viewModel()
+) {
     val navController = rememberNavController()
+
+    // Collect preview state for camera screen
+    val previewData by viewModel.previewData.collectAsState()
+    val previewSettings by viewModel.previewSettings.collectAsState()
 
     NavHost(
         navController = navController,
@@ -51,12 +61,23 @@ fun MusicScannerNavigation() {
         composable(Screen.Camera.route) {
             CameraScreen(
                 onImageCaptured = { imagePath ->
+                    // Clear preview data when capturing
+                    viewModel.clearPreviewData()
                     navController.navigate(
                         Screen.Processing.createRoute(imagePath.replace("/", "~"))
                     )
                 },
                 onBackClick = {
+                    viewModel.clearPreviewData()
                     navController.popBackStack()
+                },
+                previewData = previewData,
+                previewSettings = previewSettings,
+                onPreviewDataUpdate = { data ->
+                    viewModel.updatePreviewData(data)
+                },
+                onTogglePreview = {
+                    viewModel.togglePreviewMode()
                 }
             )
         }

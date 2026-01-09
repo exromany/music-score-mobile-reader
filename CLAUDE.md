@@ -131,7 +131,6 @@ app/src/main/java/com/musicscanner/app/
 - No instrument sounds/SoundFont (sine wave synthesis only)
 - No PDF import
 - No score editing UI
-- No real-time preview overlay on camera
 - Falls back to demo score (Twinkle Twinkle) when recognition fails
 
 ## Recently Implemented Features
@@ -146,6 +145,7 @@ app/src/main/java/com/musicscanner/app/
 - Score history/library with persistence
 - MIDI export with sharing
 - Transpose, loop, and metronome playback controls
+- Real-time preview overlay on camera (staff lines and note detection)
 
 ## Dependencies
 

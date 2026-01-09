@@ -9,10 +9,10 @@ Future features and improvements for Music Sheet Scanner.
 | Recognition | 8 | 9 | 89% |
 | Audio & Playback | 5 | 7 | 71% |
 | User Experience | 2 | 8 | 25% |
-| Camera & Image | 0 | 5 | 0% |
+| Camera & Image | 1 | 5 | 20% |
 | Technical | 1 | 6 | 17% |
 | Quick Wins | 6 | 6 | 100% |
-| **Overall** | **22** | **41** | **54%** |
+| **Overall** | **23** | **41** | **56%** |
 
 ## Recognition Improvements
 
@@ -57,7 +57,7 @@ Future features and improvements for Music Sheet Scanner.
 
 | Feature | Description | Complexity | Status |
 |---------|-------------|------------|--------|
-| **Real-time preview** | Show detected notes overlay on camera preview | High | Planned |
+| **Real-time preview** | Show detected notes overlay on camera preview | High | ✅ Done |
 | **Multi-page scanning** | Scan multiple pages into single score | Medium | Planned |
 | **Auto-crop** | Detect sheet music edges and crop automatically | Medium | Planned |
 | **Perspective correction** | Fix skewed/angled captures | Medium | Planned |
