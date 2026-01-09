@@ -167,6 +167,12 @@ See [ROADMAP.md](ROADMAP.md) for planned features and progress tracking.
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
+This project uses [Conventional Commits](https://conventionalcommits.org). Prefix your commit messages:
+- `fix:` - Bug fixes (patch release)
+- `feat:` - New features (minor release)
+- `feat!:` - Breaking changes (major release)
+- `docs:`, `chore:`, `test:` - No release
+
 ## License
 
 MIT License
