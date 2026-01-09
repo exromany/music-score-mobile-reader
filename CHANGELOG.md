@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/exromany/music-score-mobile-reader/compare/v1.1.0...v1.2.0) (2026-01-09)
+
+
+### Features
+
+* add camera/image improvements (auto-crop, perspective correction, multi-page, batch) ([0b3d5d8](https://github.com/exromany/music-score-mobile-reader/commit/0b3d5d8e6175a8d7eef5147d7f82e5d4d5358046))
+
+
+### Bug Fixes
+
+* use debug signing config when release keystore is not configured ([3ad0b4d](https://github.com/exromany/music-score-mobile-reader/commit/3ad0b4d1d64a66989dc2c25bb721ac456ac45133))
+
 ## [1.1.0](https://github.com/exromany/music-score-mobile-reader/compare/v1.0.0...v1.1.0) (2026-01-09)
 
 
