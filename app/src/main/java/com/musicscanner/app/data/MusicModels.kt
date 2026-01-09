@@ -189,7 +189,10 @@ data class PlaybackState(
     val currentBeat: Float = 0f,
     val totalBeats: Float = 0f,
     val tempo: Int = 120,
-    val currentNoteIndex: Int = 0
+    val currentNoteIndex: Int = 0,
+    val transposeSemitones: Int = 0,  // -12 to +12 semitones
+    val isLooping: Boolean = false,
+    val isMetronomeEnabled: Boolean = false
 ) {
     val progress: Float
         get() = if (totalBeats > 0) currentBeat / totalBeats else 0f

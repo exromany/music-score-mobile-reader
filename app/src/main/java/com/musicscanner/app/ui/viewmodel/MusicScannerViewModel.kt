@@ -7,6 +7,7 @@ import com.musicscanner.app.audio.MusicPlayer
 import com.musicscanner.app.data.MusicScore
 import com.musicscanner.app.data.PlaybackState
 import com.musicscanner.app.data.ProcessingState
+import com.musicscanner.app.data.ScoreRepository
 import com.musicscanner.app.recognition.MusicRecognizer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
 
     private val musicRecognizer = MusicRecognizer(application)
     private val musicPlayer = MusicPlayer()
+    private val scoreRepository = ScoreRepository(application)
 
     // Processing state
     private val _processingState = MutableStateFlow<ProcessingState>(ProcessingState.Idle)
@@ -49,12 +51,23 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
                 }
                 _currentScore.value = score
                 musicPlayer.loadScore(score)
+                // Save to history
+                scoreRepository.saveScore(score, imagePath)
             } catch (e: Exception) {
                 _processingState.value = ProcessingState.Error(
                     e.message ?: "Failed to process image"
                 )
             }
         }
+    }
+
+    /**
+     * Load a score from history
+     */
+    fun loadScoreFromHistory(score: MusicScore) {
+        _currentScore.value = score
+        musicPlayer.loadScore(score)
+        _processingState.value = ProcessingState.Complete(score)
     }
 
     /**
@@ -101,6 +114,27 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
      */
     fun seekToNote(index: Int) {
         musicPlayer.seekToNote(index)
+    }
+
+    /**
+     * Set transposition in semitones (-12 to +12)
+     */
+    fun setTranspose(semitones: Int) {
+        musicPlayer.setTranspose(semitones)
+    }
+
+    /**
+     * Toggle loop mode
+     */
+    fun toggleLoop() {
+        musicPlayer.toggleLoop()
+    }
+
+    /**
+     * Toggle metronome
+     */
+    fun toggleMetronome() {
+        musicPlayer.toggleMetronome()
     }
 
     /**
