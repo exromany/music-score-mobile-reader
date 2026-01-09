@@ -31,6 +31,7 @@ import com.musicscanner.app.data.Pitch
 import com.musicscanner.app.ui.viewmodel.MusicScannerViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaybackScreen(
     onBackClick: () -> Unit,
@@ -220,7 +221,7 @@ fun PlaybackScreen(
                 .padding(horizontal = 24.dp)
         ) {
             LinearProgressIndicator(
-                progress = { playbackState.progress },
+                progress = playbackState.progress,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
