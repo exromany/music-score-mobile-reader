@@ -37,6 +37,29 @@ Music Sheet Scanner is an Android app that captures sheet music via camera and p
 ./gradlew clean
 ```
 
+## Release Process
+
+Uses [Conventional Commits](https://conventionalcommits.org) + [release-please](https://github.com/googleapis/release-please):
+
+### Commit Format
+- `fix: message` → patch (1.0.0 → 1.0.1)
+- `feat: message` → minor (1.0.0 → 1.1.0)
+- `feat!: message` → major (1.0.0 → 2.0.0)
+
+### How It Works
+1. Push conventional commits to main
+2. release-please creates/updates Release PR
+3. Merge Release PR → GitHub release + APK built
+
+### Examples
+```
+fix: correct note detection threshold
+feat: add PDF import support
+feat!: redesign playback API
+docs: update README
+chore: update dependencies
+```
+
 ## Project Structure
 
 ```

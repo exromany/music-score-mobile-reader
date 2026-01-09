@@ -101,13 +101,21 @@ This is a proof-of-concept implementation. Current limitations include:
 ## Future Improvements
 
 - [ ] Machine learning-based note detection
-- [ ] Support for multiple staves (grand staff)
-- [ ] Bass clef support
-- [ ] Time signature detection
-- [ ] Key signature handling
+- [x] Support for multiple staves (grand staff)
+- [x] Bass clef support
+- [x] Time signature detection
+- [x] Key signature handling
 - [ ] Articulation and dynamics
-- [ ] Export to MIDI file
-- [ ] Import from gallery
+- [x] Export to MIDI file
+- [x] Import from gallery
+
+## Contributing
+
+This project uses [Conventional Commits](https://conventionalcommits.org). Prefix your commit messages:
+- `fix:` - Bug fixes (patch release)
+- `feat:` - New features (minor release)
+- `feat!:` - Breaking changes (major release)
+- `docs:`, `chore:`, `test:` - No release
 
 ## License
 
