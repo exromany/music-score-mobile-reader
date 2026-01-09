@@ -10,8 +10,10 @@ import com.musicscanner.app.data.PreferencesRepository
 import com.musicscanner.app.data.ProcessingState
 import com.musicscanner.app.data.ScoreRepository
 import com.musicscanner.app.recognition.MusicRecognizer
+import com.musicscanner.app.recognition.PageStatus
 import com.musicscanner.app.recognition.PreviewSettings
 import com.musicscanner.app.recognition.RealtimePreviewData
+import com.musicscanner.app.recognition.ScannedPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +54,33 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
     // Theme preference
     val isDarkMode: StateFlow<Boolean> = preferencesRepository.isDarkMode
 
+    // Multi-page scanning state
+    private val _multiPageMode = MutableStateFlow(false)
+    val multiPageMode: StateFlow<Boolean> = _multiPageMode.asStateFlow()
+
+    private val _scannedPages = MutableStateFlow<List<ScannedPage>>(emptyList())
+    val scannedPages: StateFlow<List<ScannedPage>> = _scannedPages.asStateFlow()
+
+    private val _currentPageIndex = MutableStateFlow(0)
+    val currentPageIndex: StateFlow<Int> = _currentPageIndex.asStateFlow()
+
+    // Batch processing state
+    private val _batchQueue = MutableStateFlow<List<String>>(emptyList())
+    val batchQueue: StateFlow<List<String>> = _batchQueue.asStateFlow()
+
+    private val _batchProcessing = MutableStateFlow(false)
+    val batchProcessing: StateFlow<Boolean> = _batchProcessing.asStateFlow()
+
+    private val _batchProgress = MutableStateFlow(0f)
+    val batchProgress: StateFlow<Float> = _batchProgress.asStateFlow()
+
+    // Image enhancement settings
+    private val _autoCropEnabled = MutableStateFlow(true)
+    val autoCropEnabled: StateFlow<Boolean> = _autoCropEnabled.asStateFlow()
+
+    private val _perspectiveCorrectionEnabled = MutableStateFlow(true)
+    val perspectiveCorrectionEnabled: StateFlow<Boolean> = _perspectiveCorrectionEnabled.asStateFlow()
+
     /**
      * Process a captured image
      */
@@ -60,9 +89,14 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
 
         viewModelScope.launch {
             try {
-                val score = musicRecognizer.recognize(imagePath) { state ->
+                val preprocessingSettings = MusicRecognizer.PreprocessingSettings(
+                    autoCrop = _autoCropEnabled.value,
+                    correctPerspective = _perspectiveCorrectionEnabled.value,
+                    enhanceContrast = true
+                )
+                val score = musicRecognizer.recognize(imagePath, { state ->
                     _processingState.value = state
-                }
+                }, preprocessingSettings)
                 _currentScore.value = score
                 musicPlayer.loadScore(score)
                 // Save to history
@@ -73,6 +107,158 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
                 )
             }
         }
+    }
+
+    /**
+     * Toggle multi-page scanning mode
+     */
+    fun toggleMultiPageMode() {
+        _multiPageMode.value = !_multiPageMode.value
+        if (!_multiPageMode.value) {
+            clearScannedPages()
+        }
+    }
+
+    /**
+     * Add a page to multi-page scan
+     */
+    fun addPageToScan(imagePath: String) {
+        val pageNumber = _scannedPages.value.size + 1
+        val newPage = ScannedPage(pageNumber, imagePath, null, PageStatus.PENDING)
+        _scannedPages.value = _scannedPages.value + newPage
+    }
+
+    /**
+     * Remove a page from multi-page scan
+     */
+    fun removePageFromScan(pageNumber: Int) {
+        _scannedPages.value = _scannedPages.value
+            .filter { it.pageNumber != pageNumber }
+            .mapIndexed { index, page -> page.copy(pageNumber = index + 1) }
+    }
+
+    /**
+     * Process all scanned pages
+     */
+    fun processMultiPageScan() {
+        if (_scannedPages.value.isEmpty()) return
+
+        viewModelScope.launch {
+            try {
+                val imagePaths = _scannedPages.value.map { it.imagePath }
+                val preprocessingSettings = MusicRecognizer.PreprocessingSettings(
+                    autoCrop = _autoCropEnabled.value,
+                    correctPerspective = _perspectiveCorrectionEnabled.value,
+                    enhanceContrast = true
+                )
+
+                val score = musicRecognizer.recognizeMultiPage(
+                    imagePaths = imagePaths,
+                    onProgressUpdate = { state ->
+                        _processingState.value = state
+                    },
+                    onPageProcessed = { pageNum, total, page ->
+                        _currentPageIndex.value = pageNum
+                        _scannedPages.value = _scannedPages.value.map {
+                            if (it.pageNumber == pageNum) page else it
+                        }
+                    },
+                    preprocessingSettings = preprocessingSettings
+                )
+
+                _currentScore.value = score
+                musicPlayer.loadScore(score)
+                _processingState.value = ProcessingState.Complete(score)
+
+                // Save merged score to history
+                scoreRepository.saveScore(score, _scannedPages.value.first().imagePath)
+            } catch (e: Exception) {
+                _processingState.value = ProcessingState.Error(
+                    e.message ?: "Failed to process multi-page scan"
+                )
+            }
+        }
+    }
+
+    /**
+     * Clear all scanned pages
+     */
+    fun clearScannedPages() {
+        _scannedPages.value = emptyList()
+        _currentPageIndex.value = 0
+    }
+
+    /**
+     * Add images to batch queue
+     */
+    fun addToBatchQueue(imagePaths: List<String>) {
+        _batchQueue.value = _batchQueue.value + imagePaths
+    }
+
+    /**
+     * Remove image from batch queue
+     */
+    fun removeFromBatchQueue(imagePath: String) {
+        _batchQueue.value = _batchQueue.value.filter { it != imagePath }
+    }
+
+    /**
+     * Clear batch queue
+     */
+    fun clearBatchQueue() {
+        _batchQueue.value = emptyList()
+        _batchProgress.value = 0f
+    }
+
+    /**
+     * Process all images in batch queue
+     */
+    fun processBatchQueue() {
+        if (_batchQueue.value.isEmpty() || _batchProcessing.value) return
+
+        _batchProcessing.value = true
+        _batchProgress.value = 0f
+
+        viewModelScope.launch {
+            val queue = _batchQueue.value.toList()
+            val preprocessingSettings = MusicRecognizer.PreprocessingSettings(
+                autoCrop = _autoCropEnabled.value,
+                correctPerspective = _perspectiveCorrectionEnabled.value,
+                enhanceContrast = true
+            )
+
+            for ((index, imagePath) in queue.withIndex()) {
+                try {
+                    val score = musicRecognizer.recognize(imagePath, { state ->
+                        _processingState.value = state
+                    }, preprocessingSettings)
+
+                    // Save each processed score to history
+                    scoreRepository.saveScore(score, imagePath)
+                } catch (e: Exception) {
+                    // Continue with next image on error
+                }
+
+                _batchProgress.value = (index + 1).toFloat() / queue.size
+            }
+
+            _batchProcessing.value = false
+            _batchQueue.value = emptyList()
+        }
+    }
+
+    /**
+     * Toggle auto-crop setting
+     */
+    fun toggleAutoCrop() {
+        _autoCropEnabled.value = !_autoCropEnabled.value
+    }
+
+    /**
+     * Toggle perspective correction setting
+     */
+    fun togglePerspectiveCorrection() {
+        _perspectiveCorrectionEnabled.value = !_perspectiveCorrectionEnabled.value
     }
 
     /**
@@ -204,6 +390,12 @@ class MusicScannerViewModel(application: Application) : AndroidViewModel(applica
         _currentScore.value = null
         _capturedImagePath.value = null
         _previewData.value = RealtimePreviewData()
+        _multiPageMode.value = false
+        _scannedPages.value = emptyList()
+        _currentPageIndex.value = 0
+        _batchQueue.value = emptyList()
+        _batchProcessing.value = false
+        _batchProgress.value = 0f
     }
 
     override fun onCleared() {

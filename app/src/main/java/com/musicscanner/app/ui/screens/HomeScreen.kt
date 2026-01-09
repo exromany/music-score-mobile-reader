@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -31,6 +32,7 @@ fun HomeScreen(
     onScanClick: () -> Unit,
     onGalleryImageSelected: (Uri) -> Unit = {},
     onHistoryClick: () -> Unit = {},
+    onMultiPageScanClick: () -> Unit = {},
     isDarkMode: Boolean = false,
     onToggleDarkMode: () -> Unit = {}
 ) {
@@ -156,6 +158,29 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Choose from Gallery",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Multi-Page Scan Button
+            OutlinedButton(
+                onClick = onMultiPageScanClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LibraryBooks,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Multi-Page Scan",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium
                 )
