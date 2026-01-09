@@ -1,72 +1,106 @@
 # Music Sheet Scanner
 
-An Android app that scans sheet music using your phone's camera and plays it back.
+An Android app that scans sheet music using your phone's camera and plays it back through Optical Music Recognition (OMR) and audio synthesis.
 
 ## Features
 
+### Camera & Import
 - **Camera Capture**: Use your phone's camera to capture images of sheet music
-- **Optical Music Recognition (OMR)**: Automatically detects staff lines, notes, and musical elements
-- **Audio Playback**: Synthesizes and plays the recognized music
-- **Playback Controls**: Play, pause, stop, and adjust tempo
+- **Real-time Preview**: Live overlay showing detected staff lines and notes on camera preview
+- **Gallery Import**: Load existing images from your device photos
+
+### Music Recognition (OMR)
+- **Staff Detection**: Automatic detection of staff lines using horizontal projection analysis
+- **Multi-Clef Support**: Treble, bass, alto, and tenor clef recognition
+- **Grand Staff**: Linked treble and bass staff detection for piano scores
+- **Note Detection**: Blob detection with position-to-pitch mapping
+- **Duration Recognition**: Whole, half, quarter, eighth, sixteenth, and thirty-second notes
+- **Beam & Flag Detection**: Proper recognition of beamed and flagged notes
+- **Rest Detection**: All standard rest durations (whole through sixteenth)
+- **Chord Recognition**: Multiple simultaneous notes on the same stem
+- **Time Signatures**: 4/4, 3/4, 6/8, 2/4, 2/2 detection
+- **Key Signatures**: Sharp and flat detection with proper pitch mapping
+
+### Audio Playback
+- **Synthesized Audio**: Sine wave synthesis with harmonics and ADSR envelope
+- **Playback Controls**: Play, pause, stop with progress tracking
+- **Variable Tempo**: Adjustable BPM control
+- **Transpose**: Shift all notes -12 to +12 semitones
+- **Loop Mode**: Toggle infinite replay of the score
+- **Metronome**: Optional click track overlay during playback
+
+### Library & Export
+- **Score History**: Save and organize your scanned scores
+- **MIDI Export**: Export recognized scores as standard .mid files
+- **Share**: Share MIDI files with other apps
+
+## Screenshots
+
+*Camera capture with real-time preview -> Processing -> Playback with controls*
 
 ## Architecture
 
-The app is built with:
-- **Kotlin** - Primary programming language
-- **Jetpack Compose** - Modern declarative UI framework
-- **CameraX** - Camera capture library
-- **Coroutines** - Asynchronous programming
+Built with modern Android development practices:
 
-### Key Components
+- **Kotlin** - Primary programming language
+- **Jetpack Compose** - Declarative UI with Material 3
+- **CameraX** - Camera capture and analysis
+- **MVVM** - Single ViewModel with StateFlow
+- **Coroutines** - Asynchronous processing
+
+### Project Structure
 
 ```
 app/src/main/java/com/musicscanner/app/
-├── MainActivity.kt              # Main entry point
-├── MusicScannerApp.kt          # Application class
+├── MainActivity.kt              # Entry point
+├── MusicScannerApp.kt          # Application singleton
 ├── ui/
-│   ├── Navigation.kt           # Navigation setup
+│   ├── Navigation.kt           # Compose Navigation routes
 │   ├── screens/
-│   │   ├── HomeScreen.kt       # Home/landing screen
-│   │   ├── CameraScreen.kt     # Camera capture screen
-│   │   ├── ProcessingScreen.kt # Processing status screen
-│   │   └── PlaybackScreen.kt   # Music playback screen
+│   │   ├── HomeScreen.kt       # Home with gallery import
+│   │   ├── CameraScreen.kt     # Camera capture with preview overlay
+│   │   ├── ProcessingScreen.kt # Processing status
+│   │   ├── PlaybackScreen.kt   # Playback with controls
+│   │   └── HistoryScreen.kt    # Score library
 │   ├── viewmodel/
 │   │   └── MusicScannerViewModel.kt
-│   └── theme/
-│       ├── Color.kt
-│       ├── Theme.kt
-│       └── Type.kt
+│   └── theme/                  # Material 3 theming
 ├── recognition/
-│   ├── ImageProcessor.kt       # Image preprocessing
-│   └── MusicRecognizer.kt      # OMR engine
+│   ├── ImageProcessor.kt       # Image preprocessing pipeline
+│   └── MusicRecognizer.kt      # OMR engine with multi-clef support
 ├── audio/
-│   ├── AudioSynthesizer.kt     # Sound synthesis
-│   └── MusicPlayer.kt          # Playback control
+│   ├── AudioSynthesizer.kt     # Sine wave synthesis with ADSR
+│   ├── MusicPlayer.kt          # Playback controller
+│   └── MidiExporter.kt         # MIDI file export
 └── data/
-    └── MusicModels.kt          # Data models
+    ├── MusicModels.kt          # Data classes and enums
+    └── ScoreRepository.kt      # Score persistence
 ```
 
 ## How It Works
 
 ### 1. Image Capture
-The app uses CameraX to capture high-quality images of sheet music.
+CameraX captures high-quality images with optional real-time preview showing detected musical elements.
 
 ### 2. Image Processing
-- Convert to grayscale
-- Apply Otsu's thresholding for binarization
-- Detect horizontal staff lines using projection analysis
+- Grayscale conversion using standard luminance formula
+- Otsu's thresholding for adaptive binarization
+- Horizontal projection analysis for staff line detection
 
 ### 3. Music Recognition
-- Detect note heads using blob detection
-- Determine note positions relative to staff lines
-- Map positions to pitches (treble clef)
-- Classify note durations (filled vs hollow)
+- Staff line detection and grouping (including grand staff)
+- Clef identification (treble, bass, alto, tenor)
+- Time and key signature detection
+- Note head detection via blob detection with flood fill
+- Beam and flag analysis for note durations
+- Rest symbol recognition
+- Position-to-pitch mapping based on clef type
 
 ### 4. Audio Synthesis
-- Convert notes to MIDI note numbers
-- Generate audio samples using sine wave synthesis with harmonics
-- Apply ADSR envelope for natural sound
-- Stream audio through Android's AudioTrack
+- MIDI note number calculation from pitch and octave
+- Sine wave generation with 2nd and 3rd harmonics
+- ADSR envelope (Attack: 10ms, Decay: 50ms, Sustain: 70%, Release: 100ms)
+- PCM streaming via Android AudioTrack
 
 ## Building
 
@@ -75,41 +109,63 @@ The app uses CameraX to capture high-quality images of sheet music.
 - JDK 17
 - Android SDK 34
 
-### Build Steps
-1. Clone the repository
-2. Open in Android Studio
-3. Sync Gradle
-4. Run on device or emulator (API 26+)
+### Build Commands
 
 ```bash
+# Build debug APK
 ./gradlew assembleDebug
+
+# Build release APK
+./gradlew assembleRelease
+
+# Install on connected device/emulator
+./gradlew installDebug
+
+# Run unit tests
+./gradlew test
+
+# Run instrumented tests
+./gradlew connectedAndroidTest
 ```
 
-## Permissions
+## Requirements
 
-The app requires:
-- **Camera** - To capture sheet music images
+- **Android**: API 26+ (Android 8.0 Oreo)
+- **Permissions**: Camera (required), Storage (for gallery import on Android 12 and below)
 
-## Limitations
+## Tips for Best Results
 
-This is a proof-of-concept implementation. Current limitations include:
-- Best results with clear, well-lit sheet music
-- Supports treble clef primarily
-- Quarter and half notes detection
-- Single staff recognition
+- Use good lighting with even illumination
+- Hold the camera parallel to the sheet music
+- Ensure the entire staff is visible in frame
+- Avoid shadows and glare on the page
+- Higher resolution images yield better recognition
 
-## Future Improvements
+## Current Limitations
 
-- [ ] Machine learning-based note detection
-- [x] Support for multiple staves (grand staff)
-- [x] Bass clef support
-- [x] Time signature detection
-- [x] Key signature handling
-- [ ] Articulation and dynamics
-- [x] Export to MIDI file
-- [x] Import from gallery
+- Uses blob detection (no ML-based recognition yet)
+- Sine wave synthesis only (no instrument sounds/SoundFont)
+- No MusicXML export (MIDI only)
+- No PDF import
+- No score editing UI
+- Falls back to demo score when recognition confidence is low
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and progress tracking.
+
+### Planned Features
+- ML-based note detection for improved accuracy
+- Instrument sounds via SoundFont/SF2
+- MusicXML export for notation software
+- PDF import support
+- Score editing UI
+- Multi-page scanning
+- Auto-crop and perspective correction
 
 ## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
 
 This project uses [Conventional Commits](https://conventionalcommits.org). Prefix your commit messages:
 - `fix:` - Bug fixes (patch release)

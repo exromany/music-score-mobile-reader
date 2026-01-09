@@ -184,3 +184,52 @@ Key libraries (see app/build.gradle.kts for versions):
 
 - `CAMERA` (required): Sheet music capture
 - Storage permissions for Android 12 and below
+
+## Testing
+
+### Running Tests
+```bash
+# Run all unit tests
+./gradlew test
+
+# Run tests for specific module
+./gradlew :app:test
+
+# Run with coverage report
+./gradlew testDebugUnitTest
+
+# Run instrumented tests (requires device/emulator)
+./gradlew connectedAndroidTest
+```
+
+### Test Files Location
+- Unit tests: `app/src/test/java/com/musicscanner/app/`
+- Instrumented tests: `app/src/androidTest/java/com/musicscanner/app/`
+
+### Key Test Areas
+- `ImageProcessorTest`: Grayscale conversion, Otsu thresholding, staff detection
+- `MusicRecognizerTest`: Note detection, pitch mapping, clef handling
+- `AudioSynthesizerTest`: Frequency calculations, ADSR envelope
+
+## Development Workflow
+
+1. **Before making changes**: Run `./gradlew test` to ensure tests pass
+2. **After changes**: Run tests again and verify on emulator/device
+3. **For UI changes**: Test on multiple screen sizes (phone and tablet)
+4. **For recognition changes**: Test with sample sheet music images in `app/src/test/resources/`
+
+## Common Issues
+
+### Build Issues
+- If Gradle sync fails, try `./gradlew clean` then sync again
+- Ensure JDK 17 is configured in Android Studio
+
+### Runtime Issues
+- Camera permission must be granted for capture features
+- Gallery import requires storage permissions on Android 12 and below
+- Real-time preview may lag on low-end devices due to image processing
+
+### Recognition Quality
+- Best results with clear, well-lit images
+- Handwritten music is not supported
+- Complex orchestral scores may not parse correctly
