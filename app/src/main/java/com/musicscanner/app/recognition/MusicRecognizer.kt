@@ -44,15 +44,77 @@ class MusicRecognizer(private val context: Context) {
                 return@withContext generateDemoScore()
             }
 
-            // Step 4: Recognize musical elements
+            // Step 4: Detect clefs, time signatures, and key signatures for each staff
             onProgressUpdate(ProcessingState.RecognizingNotes)
+            val clefs = staffLines.map { staff ->
+                imageProcessor.detectClef(binary, bitmap.width, bitmap.height, staff)
+            }
+
+            // Update staff groups with detected clefs
+            staffLines.forEachIndexed { index, staff ->
+                staff.detectedClef = clefs[index].clef
+            }
+
+            // Detect time and key signatures
+            val timeSignatures = staffLines.mapIndexed { index, staff ->
+                val clefEndX = clefs[index].endX
+                imageProcessor.detectTimeSignature(binary, bitmap.width, bitmap.height, staff, clefEndX)
+            }
+
+            val keySignatures = staffLines.mapIndexed { index, staff ->
+                val timeEndX = timeSignatures[index].endX
+                imageProcessor.detectKeySignature(binary, bitmap.width, bitmap.height, staff, timeEndX)
+            }
+
+            // Update staff groups with detected signatures
+            staffLines.forEachIndexed { index, staff ->
+                staff.detectedTimeSignature = timeSignatures[index].timeSignature
+                staff.detectedKeySignature = keySignatures[index].keySignature
+            }
+
+            // Detect grand staff pairings
+            val grandStaffs = imageProcessor.detectGrandStaff(staffLines, clefs)
+
+            // Step 5: Detect note heads
             val noteHeads = imageProcessor.detectNoteHeads(
                 binary, bitmap.width, bitmap.height, staffLines
             )
 
-            // Step 5: Build music score
+            // Step 6: Detect note durations (stems, flags, beams)
+            val noteDurations = noteHeads.map { noteHead ->
+                val staffIndex = noteHead.staffIndex
+                if (staffIndex in staffLines.indices) {
+                    imageProcessor.detectNoteDuration(
+                        binary, bitmap.width, bitmap.height, noteHead, staffLines[staffIndex]
+                    )
+                } else {
+                    NoteDuration.QUARTER
+                }
+            }
+
+            // Step 7: Detect beams for grouped notes
+            val allBeams = staffLines.mapIndexed { staffIndex, staff ->
+                val staffNotes = noteHeads.filter { it.staffIndex == staffIndex }
+                imageProcessor.detectBeams(binary, bitmap.width, bitmap.height, staffNotes, staff)
+            }
+
+            // Step 8: Detect chords
+            val allChords = staffLines.mapIndexed { staffIndex, staff ->
+                val staffNotes = noteHeads.filter { it.staffIndex == staffIndex }
+                imageProcessor.detectChords(staffNotes, staff)
+            }
+
+            // Step 9: Detect rests
+            val allRests = staffLines.mapIndexed { staffIndex, staff ->
+                val staffNotes = noteHeads.filter { it.staffIndex == staffIndex }
+                imageProcessor.detectRests(binary, bitmap.width, bitmap.height, staff, staffNotes)
+            }
+
+            // Step 10: Build music score
             onProgressUpdate(ProcessingState.GeneratingMidi)
-            val score = buildMusicScore(staffLines, noteHeads)
+            val score = buildMusicScore(
+                staffLines, noteHeads, noteDurations, allRests, allChords, allBeams, grandStaffs
+            )
 
             onProgressUpdate(ProcessingState.Complete(score))
             score
@@ -86,34 +148,123 @@ class MusicRecognizer(private val context: Context) {
      */
     private fun buildMusicScore(
         staffLines: List<StaffLineGroup>,
-        noteHeads: List<DetectedNoteHead>
+        noteHeads: List<DetectedNoteHead>,
+        noteDurations: List<NoteDuration>,
+        allRests: List<List<DetectedRest>>,
+        allChords: List<List<DetectedChord>>,
+        allBeams: List<List<DetectedBeam>>,
+        grandStaffs: List<GrandStaffGroup>
     ): MusicScore {
         val staves = staffLines.mapIndexed { staffIndex, staffLine ->
-            val staffNotes = noteHeads
-                .filter { it.staffIndex == staffIndex }
-                .mapIndexed { noteIndex, noteHead ->
-                    convertToMusicNote(noteHead, noteIndex, staffLine)
-                }
+            val staffNoteHeads = noteHeads.withIndex()
+                .filter { it.value.staffIndex == staffIndex }
 
-            // Group notes into measures (assume 4/4 time, 4 notes per measure for simplicity)
-            val measures = staffNotes.chunked(4).mapIndexed { measureIndex, notes ->
-                Measure(
-                    number = measureIndex,
-                    notes = notes.mapIndexed { idx, note ->
-                        note.copy(
-                            measureNumber = measureIndex,
-                            positionInMeasure = idx.toFloat()
+            val staffRests = allRests.getOrNull(staffIndex) ?: emptyList()
+            val staffChords = allChords.getOrNull(staffIndex) ?: emptyList()
+            val staffBeams = allBeams.getOrNull(staffIndex) ?: emptyList()
+
+            // Get detected time and key signatures
+            val timeSignature = staffLine.detectedTimeSignature
+            val keySignature = staffLine.detectedKeySignature
+            val clef = staffLine.detectedClef
+
+            // Build list of all musical events (notes and rests) sorted by x position
+            val musicalEvents = mutableListOf<MusicalEvent>()
+
+            // Add notes with their detected durations
+            for ((globalIndex, noteHead) in staffNoteHeads) {
+                val duration = noteDurations.getOrNull(globalIndex) ?: NoteDuration.QUARTER
+                musicalEvents.add(MusicalEvent.NoteEvent(noteHead, duration, globalIndex))
+            }
+
+            // Add rests
+            for (rest in staffRests) {
+                musicalEvents.add(MusicalEvent.RestEvent(rest))
+            }
+
+            // Sort events by x position
+            musicalEvents.sortBy {
+                when (it) {
+                    is MusicalEvent.NoteEvent -> it.noteHead.x
+                    is MusicalEvent.RestEvent -> it.rest.x
+                }
+            }
+
+            // Handle chords - merge notes that are part of the same chord
+            val chordNoteIndices = staffChords.flatMap { it.noteIndices }.toSet()
+
+            // Calculate beats per measure from time signature
+            val beatsPerMeasure = timeSignature.numerator.toFloat()
+
+            // Build notes from events, tracking position
+            val staffNotes = mutableListOf<MusicNote>()
+            var currentBeat = 0f
+            var currentMeasure = 0
+
+            for (event in musicalEvents) {
+                when (event) {
+                    is MusicalEvent.NoteEvent -> {
+                        val (pitch, octave) = staffPositionToPitch(event.noteHead.staffPosition, clef)
+
+                        // Apply key signature accidentals
+                        val keyAccidentals = keySignature.getAffectedPitches()
+                        val accidental = keyAccidentals[pitch] ?: Accidental.NONE
+
+                        val note = MusicNote(
+                            pitch = pitch,
+                            octave = octave,
+                            duration = event.duration,
+                            positionInMeasure = currentBeat,
+                            measureNumber = currentMeasure,
+                            isRest = false,
+                            accidental = accidental
                         )
-                    },
-                    timeSignature = TimeSignature.COMMON_TIME,
-                    keySignature = KeySignature.C_MAJOR
+                        staffNotes.add(note)
+
+                        // Check if this note is part of a chord - if so, don't advance beat
+                        val isChordNote = event.globalIndex in chordNoteIndices
+                        if (!isChordNote) {
+                            currentBeat += note.getDurationInBeats()
+                            if (currentBeat >= beatsPerMeasure) {
+                                currentMeasure++
+                                currentBeat -= beatsPerMeasure
+                            }
+                        }
+                    }
+                    is MusicalEvent.RestEvent -> {
+                        val rest = MusicNote(
+                            pitch = Pitch.REST,
+                            octave = 4,
+                            duration = event.rest.duration,
+                            positionInMeasure = currentBeat,
+                            measureNumber = currentMeasure,
+                            isRest = true
+                        )
+                        staffNotes.add(rest)
+
+                        currentBeat += rest.getDurationInBeats()
+                        if (currentBeat >= beatsPerMeasure) {
+                            currentMeasure++
+                            currentBeat -= beatsPerMeasure
+                        }
+                    }
+                }
+            }
+
+            // Group notes into measures
+            val measureCount = (staffNotes.maxOfOrNull { it.measureNumber } ?: 0) + 1
+            val measures = (0 until measureCount).map { measureNum ->
+                Measure(
+                    number = measureNum,
+                    notes = staffNotes.filter { it.measureNumber == measureNum },
+                    timeSignature = timeSignature,
+                    keySignature = keySignature
                 )
             }
 
             Staff(
-                clef = Clef.TREBLE,
+                clef = clef,
                 measures = measures.ifEmpty {
-                    // Create at least one measure with a rest if no notes detected
                     listOf(
                         Measure(
                             number = 0,
@@ -127,13 +278,13 @@ class MusicRecognizer(private val context: Context) {
                                     isRest = true
                                 )
                             ),
-                            timeSignature = TimeSignature.COMMON_TIME,
-                            keySignature = KeySignature.C_MAJOR
+                            timeSignature = timeSignature,
+                            keySignature = keySignature
                         )
                     )
                 },
-                initialTimeSignature = TimeSignature.COMMON_TIME,
-                initialKeySignature = KeySignature.C_MAJOR
+                initialTimeSignature = timeSignature,
+                initialKeySignature = keySignature
             )
         }
 
@@ -145,6 +296,19 @@ class MusicRecognizer(private val context: Context) {
                 listOf(createDefaultStaff())
             }
         )
+    }
+
+    /**
+     * Helper sealed class for ordering musical events
+     */
+    private sealed class MusicalEvent {
+        data class NoteEvent(
+            val noteHead: DetectedNoteHead,
+            val duration: NoteDuration,
+            val globalIndex: Int
+        ) : MusicalEvent()
+
+        data class RestEvent(val rest: DetectedRest) : MusicalEvent()
     }
 
     /**
@@ -178,12 +342,22 @@ class MusicRecognizer(private val context: Context) {
 
     /**
      * Convert staff position to pitch and octave
-     * Position 0 = middle line
+     * Position 0 = middle line (B4 for treble, D3 for bass)
      */
     private fun staffPositionToPitch(position: Int, clef: Clef): Pair<Pitch, Int> {
-        // For treble clef: middle line (position 0) = B4
-        // Each position is a diatonic step
-        val trebleClefPitches = listOf(
+        return when (clef) {
+            Clef.TREBLE -> trebleClefPositionToPitch(position)
+            Clef.BASS -> bassClefPositionToPitch(position)
+            Clef.ALTO -> altoClefPositionToPitch(position)
+            Clef.TENOR -> tenorClefPositionToPitch(position)
+        }
+    }
+
+    /**
+     * Treble clef: middle line (position 0) = B4
+     */
+    private fun trebleClefPositionToPitch(position: Int): Pair<Pitch, Int> {
+        val pitches = listOf(
             Pitch.E to 3,  // -6
             Pitch.F to 3,  // -5
             Pitch.G to 3,  // -4
@@ -204,10 +378,97 @@ class MusicRecognizer(private val context: Context) {
             Pitch.A to 5,  // 11
             Pitch.B to 5,  // 12
         )
+        val index = (position + 6).coerceIn(0, pitches.lastIndex)
+        return pitches[index]
+    }
 
-        // Offset to map position to array index
-        val index = (position + 6).coerceIn(0, trebleClefPitches.lastIndex)
-        return trebleClefPitches[index]
+    /**
+     * Bass clef: middle line (position 0) = D3
+     * Bass clef F line (4th line) = F2
+     */
+    private fun bassClefPositionToPitch(position: Int): Pair<Pitch, Int> {
+        val pitches = listOf(
+            Pitch.G to 1,  // -6
+            Pitch.A to 1,  // -5
+            Pitch.B to 1,  // -4
+            Pitch.C to 2,  // -3
+            Pitch.D to 2,  // -2
+            Pitch.E to 2,  // -1
+            Pitch.F to 2,  // 0 (first line)
+            Pitch.G to 2,  // 1
+            Pitch.A to 2,  // 2 (fourth line - F clef marker)
+            Pitch.B to 2,  // 3
+            Pitch.C to 3,  // 4
+            Pitch.D to 3,  // 5 (middle line)
+            Pitch.E to 3,  // 6
+            Pitch.F to 3,  // 7
+            Pitch.G to 3,  // 8
+            Pitch.A to 3,  // 9
+            Pitch.B to 3,  // 10
+            Pitch.C to 4,  // 11
+            Pitch.D to 4,  // 12
+        )
+        val index = (position + 6).coerceIn(0, pitches.lastIndex)
+        return pitches[index]
+    }
+
+    /**
+     * Alto clef: middle line (position 0) = C4 (middle C)
+     */
+    private fun altoClefPositionToPitch(position: Int): Pair<Pitch, Int> {
+        val pitches = listOf(
+            Pitch.F to 2,  // -6
+            Pitch.G to 2,  // -5
+            Pitch.A to 2,  // -4
+            Pitch.B to 2,  // -3
+            Pitch.C to 3,  // -2
+            Pitch.D to 3,  // -1
+            Pitch.E to 3,  // 0 (first line)
+            Pitch.F to 3,  // 1
+            Pitch.G to 3,  // 2
+            Pitch.A to 3,  // 3
+            Pitch.B to 3,  // 4
+            Pitch.C to 4,  // 5 (middle line - middle C)
+            Pitch.D to 4,  // 6
+            Pitch.E to 4,  // 7
+            Pitch.F to 4,  // 8
+            Pitch.G to 4,  // 9
+            Pitch.A to 4,  // 10
+            Pitch.B to 4,  // 11
+            Pitch.C to 5,  // 12
+        )
+        val index = (position + 6).coerceIn(0, pitches.lastIndex)
+        return pitches[index]
+    }
+
+    /**
+     * Tenor clef: middle line (position 0) = A3
+     * C4 is on the fourth line
+     */
+    private fun tenorClefPositionToPitch(position: Int): Pair<Pitch, Int> {
+        val pitches = listOf(
+            Pitch.D to 2,  // -6
+            Pitch.E to 2,  // -5
+            Pitch.F to 2,  // -4
+            Pitch.G to 2,  // -3
+            Pitch.A to 2,  // -2
+            Pitch.B to 2,  // -1
+            Pitch.C to 3,  // 0 (first line)
+            Pitch.D to 3,  // 1
+            Pitch.E to 3,  // 2
+            Pitch.F to 3,  // 3
+            Pitch.G to 3,  // 4
+            Pitch.A to 3,  // 5 (middle line)
+            Pitch.B to 3,  // 6
+            Pitch.C to 4,  // 7 (fourth line - middle C)
+            Pitch.D to 4,  // 8
+            Pitch.E to 4,  // 9
+            Pitch.F to 4,  // 10
+            Pitch.G to 4,  // 11
+            Pitch.A to 4,  // 12
+        )
+        val index = (position + 6).coerceIn(0, pitches.lastIndex)
+        return pitches[index]
     }
 
     /**
