@@ -9,9 +9,9 @@ Future features and improvements for Music Sheet Scanner.
 | Recognition | 8 | 9 | 89% |
 | Audio & Playback | 5 | 7 | 71% |
 | User Experience | 3 | 8 | 38% |
-| Camera & Image | 1 | 5 | 20% |
+| Camera & Image | 5 | 5 | 100% |
 | Technical | 1 | 6 | 17% |
-| **Overall** | **18** | **35** | **51%** |
+| **Overall** | **22** | **35** | **63%** |
 
 ## Recognition Improvements
 
@@ -57,10 +57,10 @@ Future features and improvements for Music Sheet Scanner.
 | Feature | Description | Complexity | Status |
 |---------|-------------|------------|--------|
 | **Real-time preview** | Show detected notes overlay on camera preview | High | Done |
-| **Multi-page scanning** | Scan multiple pages into single score | Medium | Planned |
-| **Auto-crop** | Detect sheet music edges and crop automatically | Medium | Planned |
-| **Perspective correction** | Fix skewed/angled captures | Medium | Planned |
-| **Batch processing** | Queue multiple images for recognition | Low | Planned |
+| **Multi-page scanning** | Scan multiple pages into single score | Medium | Done |
+| **Auto-crop** | Detect sheet music edges and crop automatically | Medium | Done |
+| **Perspective correction** | Fix skewed/angled captures | Medium | Done |
+| **Batch processing** | Queue multiple images for recognition | Low | Done |
 
 ## Technical Improvements
 
@@ -84,24 +84,24 @@ Future features and improvements for Music Sheet Scanner.
 6. ~~Time/key signature detection~~ - Proper musical context
 7. ~~Real-time preview~~ - Better capture experience
 8. ~~Playback controls~~ - Transpose, loop, metronome
+9. ~~Multi-page scanning~~ - Handle longer pieces
+10. ~~Auto-crop~~ - Improved capture convenience
+11. ~~Perspective correction~~ - Handle angled captures
+12. ~~Batch processing~~ - Queue multiple images for recognition
 
 ### Next Up (High Priority)
-9. **ML-based detection** - Significant accuracy improvement over blob detection
-10. **Instrument sounds** - Better audio quality with SoundFont/SF2
-11. **PDF import** - Support common digital sheet music format
-12. **Score editing** - Allow users to correct recognition mistakes
+13. **ML-based detection** - Significant accuracy improvement over blob detection
+14. **Instrument sounds** - Better audio quality with SoundFont/SF2
+15. **PDF import** - Support common digital sheet music format
+16. **Score editing** - Allow users to correct recognition mistakes
 
 ### Future (Medium Priority)
-13. **MusicXML export** - Professional notation software interoperability
-14. **Multi-page scanning** - Handle longer pieces
-15. **Auto-crop** - Improved capture convenience
-16. **Perspective correction** - Handle angled captures
-17. **Unit tests** - Code quality and reliability
+17. **MusicXML export** - Professional notation software interoperability
+18. **Unit tests** - Code quality and reliability
 
 ### Backlog (Lower Priority)
-18. Landscape mode
-19. Pinch-to-zoom
-20. Batch processing
+19. Landscape mode
+20. Pinch-to-zoom
 21. Dark mode toggle
 22. Dependency injection
 23. Accessibility improvements

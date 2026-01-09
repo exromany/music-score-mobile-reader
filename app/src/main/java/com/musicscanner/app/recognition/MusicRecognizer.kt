@@ -15,23 +15,56 @@ import kotlinx.coroutines.withContext
 class MusicRecognizer(private val context: Context) {
 
     private val imageProcessor = ImageProcessor()
+    private val imageEnhancer = ImageEnhancer()
+
+    /**
+     * Settings for image preprocessing
+     */
+    data class PreprocessingSettings(
+        val autoCrop: Boolean = true,
+        val correctPerspective: Boolean = true,
+        val enhanceContrast: Boolean = true
+    )
 
     /**
      * Process an image and extract music notation
      */
     suspend fun recognize(
         imagePath: String,
-        onProgressUpdate: (ProcessingState) -> Unit
+        onProgressUpdate: (ProcessingState) -> Unit,
+        preprocessingSettings: PreprocessingSettings = PreprocessingSettings()
     ): MusicScore = withContext(Dispatchers.Default) {
 
         try {
             // Step 1: Load image
             onProgressUpdate(ProcessingState.LoadingImage)
-            val bitmap = loadImage(imagePath)
+            var bitmap = loadImage(imagePath)
                 ?: throw RecognitionException("Failed to load image")
 
-            // Step 2: Preprocess image
+            // Step 2: Preprocess image with auto-crop and perspective correction
             onProgressUpdate(ProcessingState.PreprocessingImage)
+
+            // Apply auto-crop if enabled
+            if (preprocessingSettings.autoCrop) {
+                val cropResult = imageEnhancer.detectCropBounds(bitmap)
+                if (cropResult.isValid) {
+                    bitmap = imageEnhancer.applyCrop(bitmap, cropResult)
+                }
+            }
+
+            // Apply perspective correction if enabled
+            if (preprocessingSettings.correctPerspective) {
+                val perspectiveResult = imageEnhancer.detectPerspective(bitmap)
+                if (perspectiveResult.needsCorrection) {
+                    bitmap = imageEnhancer.correctPerspective(bitmap, perspectiveResult)
+                }
+            }
+
+            // Enhance for better recognition
+            if (preprocessingSettings.enhanceContrast) {
+                bitmap = imageEnhancer.enhanceForRecognition(bitmap)
+            }
+
             val grayscale = imageProcessor.toGrayscale(bitmap)
             val binary = imageProcessor.binarize(grayscale, bitmap.width, bitmap.height)
 
@@ -123,6 +156,94 @@ class MusicRecognizer(private val context: Context) {
             onProgressUpdate(ProcessingState.Error(e.message ?: "Unknown error"))
             throw e
         }
+    }
+
+    /**
+     * Process multiple pages and merge into a single score
+     */
+    suspend fun recognizeMultiPage(
+        imagePaths: List<String>,
+        onProgressUpdate: (ProcessingState) -> Unit,
+        onPageProcessed: (Int, Int, ScannedPage) -> Unit,
+        preprocessingSettings: PreprocessingSettings = PreprocessingSettings()
+    ): MusicScore = withContext(Dispatchers.Default) {
+        val pages = mutableListOf<ScannedPage>()
+        val scores = mutableListOf<MusicScore>()
+
+        for ((index, imagePath) in imagePaths.withIndex()) {
+            val pageNumber = index + 1
+            onPageProcessed(pageNumber, imagePaths.size, ScannedPage(pageNumber, imagePath, null, PageStatus.PROCESSING))
+
+            try {
+                val score = recognize(imagePath, onProgressUpdate, preprocessingSettings)
+                val page = ScannedPage(pageNumber, imagePath, score, PageStatus.COMPLETED)
+                pages.add(page)
+                scores.add(score)
+                onPageProcessed(pageNumber, imagePaths.size, page)
+            } catch (e: Exception) {
+                val errorPage = ScannedPage(pageNumber, imagePath, null, PageStatus.ERROR)
+                pages.add(errorPage)
+                onPageProcessed(pageNumber, imagePaths.size, errorPage)
+            }
+        }
+
+        // Merge all scores into one
+        mergeScores(scores)
+    }
+
+    /**
+     * Merge multiple scores into a single continuous score
+     */
+    private fun mergeScores(scores: List<MusicScore>): MusicScore {
+        if (scores.isEmpty()) {
+            return generateDemoScore()
+        }
+
+        if (scores.size == 1) {
+            return scores.first()
+        }
+
+        // Combine all staves from all scores
+        val mergedStaves = mutableListOf<Staff>()
+        var measureOffset = 0
+
+        for (score in scores) {
+            for (staff in score.staves) {
+                // Offset measure numbers to create continuous sequence
+                val offsetMeasures = staff.measures.map { measure ->
+                    measure.copy(
+                        number = measure.number + measureOffset,
+                        notes = measure.notes.map { note ->
+                            note.copy(measureNumber = note.measureNumber + measureOffset)
+                        }
+                    )
+                }
+
+                // Find or create matching staff in merged result
+                val existingStaffIndex = mergedStaves.indexOfFirst { it.clef == staff.clef }
+                if (existingStaffIndex >= 0) {
+                    // Append measures to existing staff
+                    val existingStaff = mergedStaves[existingStaffIndex]
+                    mergedStaves[existingStaffIndex] = existingStaff.copy(
+                        measures = existingStaff.measures + offsetMeasures
+                    )
+                } else {
+                    // Add new staff with offset measures
+                    mergedStaves.add(staff.copy(measures = offsetMeasures))
+                }
+            }
+
+            // Update measure offset for next score
+            val maxMeasure = score.staves.flatMap { it.measures }.maxOfOrNull { it.number } ?: 0
+            measureOffset += maxMeasure + 1
+        }
+
+        return MusicScore(
+            title = scores.firstOrNull()?.title ?: "Merged Score",
+            composer = scores.firstOrNull()?.composer ?: "Unknown",
+            tempo = scores.firstOrNull()?.tempo ?: 120,
+            staves = mergedStaves
+        )
     }
 
     /**
@@ -549,3 +670,30 @@ class MusicRecognizer(private val context: Context) {
 }
 
 class RecognitionException(message: String) : Exception(message)
+
+/**
+ * Represents a page in a multi-page scan
+ */
+data class ScannedPage(
+    val pageNumber: Int,
+    val imagePath: String,
+    val score: MusicScore? = null,
+    val status: PageStatus = PageStatus.PENDING
+)
+
+enum class PageStatus {
+    PENDING,
+    PROCESSING,
+    COMPLETED,
+    ERROR
+}
+
+/**
+ * Result of multi-page recognition
+ */
+data class MultiPageResult(
+    val pages: List<ScannedPage>,
+    val mergedScore: MusicScore?,
+    val totalPages: Int,
+    val processedPages: Int
+)

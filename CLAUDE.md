@@ -68,17 +68,19 @@ app/src/main/java/com/musicscanner/app/
 ├── MusicScannerApp.kt          # Application singleton
 ├── ui/
 │   ├── Navigation.kt           # Compose Navigation routes
-│   ├── screens/                # UI screens (Home, Camera, Processing, Playback, History)
-│   │   ├── HomeScreen.kt       # Home with gallery import
-│   │   ├── CameraScreen.kt     # Camera capture
+│   ├── screens/                # UI screens (Home, Camera, Processing, Playback, History, MultiPage)
+│   │   ├── HomeScreen.kt       # Home with gallery import and multi-page option
+│   │   ├── CameraScreen.kt     # Camera capture with real-time preview
 │   │   ├── ProcessingScreen.kt # Image processing status
 │   │   ├── PlaybackScreen.kt   # Playback with controls (loop, transpose, metronome)
-│   │   └── HistoryScreen.kt    # Score library/history
+│   │   ├── HistoryScreen.kt    # Score library/history
+│   │   └── MultiPageScanScreen.kt # Multi-page scanning with batch support
 │   ├── viewmodel/              # MusicScannerViewModel (single ViewModel)
 │   └── theme/                  # Material 3 theming (Color, Type, Theme)
 ├── recognition/
-│   ├── MusicRecognizer.kt      # OMR orchestrator (multi-clef support)
-│   └── ImageProcessor.kt       # Image preprocessing pipeline (enhanced detection)
+│   ├── MusicRecognizer.kt      # OMR orchestrator (multi-clef, multi-page support)
+│   ├── ImageProcessor.kt       # Image preprocessing pipeline (enhanced detection)
+│   └── ImageEnhancer.kt        # Auto-crop, perspective correction, contrast enhancement
 ├── audio/
 │   ├── AudioSynthesizer.kt     # Sine wave synthesis with ADSR
 │   ├── MusicPlayer.kt          # Playback controller (loop, transpose, metronome)
@@ -119,6 +121,13 @@ app/src/main/java/com/musicscanner/app/
 
 ## Image Processing Pipeline
 
+### Image Enhancement (ImageEnhancer)
+1. **Auto-crop**: Detect sheet music boundaries via projection analysis
+2. **Perspective detection**: Analyze horizontal lines for skew angle
+3. **Skew correction**: Rotate image to straighten staff lines
+4. **Contrast enhancement**: Histogram-based adaptive stretching
+
+### Music Recognition (ImageProcessor)
 1. Grayscale conversion (standard luminance formula)
 2. Binarization via Otsu's thresholding
 3. Staff line detection via horizontal projection
@@ -130,6 +139,11 @@ app/src/main/java/com/musicscanner/app/
 9. Rest detection (whole, half, quarter, eighth, sixteenth)
 10. Chord detection (multiple notes on same stem)
 11. Position-to-pitch mapping (treble, bass, alto, tenor clefs)
+
+### Multi-Page Processing (MusicRecognizer)
+- Process multiple images sequentially
+- Merge scores with measure offset tracking
+- Combine staves with matching clefs
 
 ## Audio Synthesis & Playback
 
@@ -169,6 +183,10 @@ app/src/main/java/com/musicscanner/app/
 - MIDI export with sharing
 - Transpose, loop, and metronome playback controls
 - Real-time preview overlay on camera (staff lines and note detection)
+- **Auto-crop**: Automatic detection and cropping of sheet music boundaries
+- **Perspective correction**: Skew detection and automatic straightening
+- **Multi-page scanning**: Scan multiple pages and merge into single score
+- **Batch processing**: Queue multiple images for sequential recognition
 
 ## Dependencies
 
@@ -179,6 +197,7 @@ Key libraries (see app/build.gradle.kts for versions):
 - Navigation Compose 2.7.5
 - Accompanist Permissions 0.32.0
 - Coroutines 1.7.3
+- Coil Compose 2.5.0 (image loading for thumbnails)
 
 ## Permissions
 
