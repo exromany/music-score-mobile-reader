@@ -1,17 +1,22 @@
 {
   "name": "Android Dev",
-  "image": "mcr.microsoft.com/devcontainers/java:17",
-  "features": {
-    "ghcr.io/devcontainers/features/android-sdk:1": {
-      "cmdLineToolsVersion": "latest",
-      "buildToolsVersion": "34.0.0",
-      "platformVersion": "34"
-    }
+  "build": {
+    "dockerfile": "Dockerfile"
   },
   "customizations": {
     "vscode": {
-      "extensions": ["vscjava.vscode-java-pack"]
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "mathiasfrohlich.Kotlin"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic"
+      }
     }
   },
-  "postCreateCommand": "echo 'Android dev container ready'"
+  "postCreateCommand": "./gradlew --version",
+  "remoteEnv": {
+    "ANDROID_HOME": "/usr/local/android-sdk",
+    "ANDROID_SDK_ROOT": "/usr/local/android-sdk"
+  }
 }
