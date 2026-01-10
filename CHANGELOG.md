@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/exromany/music-score-mobile-reader/compare/v1.2.0...v1.2.1) (2026-01-10)
+
+
+### Bug Fixes
+
+* remove invalid cache domain from backup rules ([2556264](https://github.com/exromany/music-score-mobile-reader/commit/2556264f61ab58bbe309513131632430fa938fc8))
+
 ## [1.2.0](https://github.com/exromany/music-score-mobile-reader/compare/v1.1.0...v1.2.0) (2026-01-09)
 
 
